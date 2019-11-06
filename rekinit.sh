@@ -1,31 +1,33 @@
-#!/bin/sh
+#!/bin/bash
 
 [ -z  "$PERIOD_SECONDS"   ] && PERIOD_SECONDS=3600
 
-if [ -z "$OPTIONS" ]; then
+CREDENTIALS_FILE=/dev/shm/creds
 
-[ -e /krb5/krb5.keytab ] && OPTIONS="-k" && echo "*** using host keytab"
-[ -e /krb5/client.keytab ] && OPTIONS="-k -i" && echo "*** using client keytab"
 
-fi
-
-if [ -z "$(ls -A /krb5)" ]; then
-echo "*** Warning default keytab (/krb5/krb5.keytab) or default client keytab (/krb5/client.keytab) not found"
-fi
 
 while true
 do
-# report to stdout the time the kinit was being run
-echo "*** kinit at "+$(date -I)
 
-# run kinit with passed options, note APPEND_OPTIONS allows for
-# additional parameters to be configured. The verbose option is always set
-kinit -V $OPTIONS $APPEND_OPTIONS
+   while [ ! -e $CREDENTIALS_FILE ]
+   do
+     echo "Credential file is not present"
+     sleep 3
+   done
 
-# report the valid tokens
-klist -c /dev/shm/ccache
+   USER=`cat $CREDENTIALS_FILE | sed -n '1p'`
+    
+   PASSWORD=`cat $CREDENTIALS_FILE | sed -n '2p'`
 
-# sleep for the defined period, then repeat
-echo "*** Waiting for $PERIOD_SECONDS seconds"
-sleep $PERIOD_SECONDS
+   # report to stdout the time the kinit was being run
+   echo "*** kinit at "+$(date -I)
+
+   # run kinit with passed options, note APPEND_OPTIONS allows for
+   # additional parameters to be configured. The verbose option is always set
+   echo "$PASSWORD"|  kinit -V $USER
+
+
+   # sleep for the defined period, then repeat
+   echo "*** Waiting for $PERIOD_SECONDS seconds"
+   sleep $PERIOD_SECONDS
 done
